@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=muzi
+      - POSTGRES_USER=jishan
+      - POSTGRES_PASSWORD=Jishan@2002
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8080:8080"
+# docker-compose up --to run this file
+# docker-compose down --to stop this file
+# docker-compose logs -f  --to view logs
+
+

@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
         }
 
         const extractedId = match[1];
-        console.log("Extracted video ID:", extractedId);
+        // console.log("Extracted video ID:", extractedId);
 
         const API_KEY = process.env.YT_API_KEY;
         const ytUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${extractedId}&key=${API_KEY}`;
@@ -38,14 +38,15 @@ export async function POST(req: NextRequest) {
         }
 
         const ytData = await ytRes.json();
-        console.log("YouTube Video Data:", ytData);
+        // console.log("YouTube Video Data:", ytData);
 
         // Extract video details safely
         const video = ytData.items?.[0];
         const title = video?.snippet?.title || "Untitled";
-        const thumbnail = video?.snippet?.thumbnails?.default?.url || "";
+        const SmallImg = video?.snippet?.thumbnails?.standard?.url || "";
+        const bigImg = video?.snippet?.thumbnails?.maxres?.url || "";
 
-        console.log("title and thumbnail", thumbnail, title)
+        // console.log("title and thumbnail", SmallImg, bigImg, title)
         // Check if user exists
         const user = await prismaClient.user.findUnique({
             where: { id: parsed.creatorId },
@@ -64,10 +65,10 @@ export async function POST(req: NextRequest) {
                 userId: parsed.creatorId,
                 url: parsed.url,
                 extractedId,
+                title: title,
                 type: "Youtube",
-                // Uncomment these fields if you have them in your schema:
-                // title,
-                // thumbnail,
+                smallImg:SmallImg,
+                bigImg:bigImg,
             },
         });
 
