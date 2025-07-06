@@ -3,26 +3,11 @@ import { Input } from "@/components/ui/input"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Music, Users, Vote, Zap } from "lucide-react"
 import Link from "next/link"
-import Login from "./components/login"
-import { Redirect } from "./components/redirect"
 
 export default function Component() {
   return (
     <div className="flex flex-col min-h-screen bg-gray-900 text-white">
       {/* Header */}
-      <header className="px-6 h-16 flex items-center border-b border-gray-800">
-        <Link href="/" className="flex items-center gap-2">
-          <Music className="h-6 w-6 text-purple-400" />
-          <span className="font-bold text-xl">Muzi</span>
-        </Link>
-        <nav className="ml-auto">
-          <Link href={"/login"}>
-           <Login />
-          </Link>
-          <Redirect />
-        </nav>
-      </header>
-
       <main className="flex-1">
         {/* Hero Section */}
         <section className="py-20 px-6">

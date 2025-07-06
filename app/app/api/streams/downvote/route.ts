@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse ,NextRequest } from "next/server";    
 import { z } from "zod";
 
-const UpvoteSchema = z.object({
+const DownvoteSchema = z.object({
     streamId: z.string(),
 })
 export async function POST(req: NextRequest) {
@@ -25,12 +25,15 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-        const data = UpvoteSchema.parse(await req.json())
+        const data = DownvoteSchema.parse(await req.json())
         await prismaClient.upvote.create({
             data: {
                 userId : user?.id,
                 streamId :data.streamId
             }
+        })
+        return NextResponse.json({
+            message:"Done!~"
         })
     } catch (e) {
         return NextResponse.json({
