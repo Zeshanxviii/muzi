@@ -15,7 +15,8 @@ services:
     ports:
       - "8080:8080"
 # docker-compose up --to run this file
-# docker-compose down --to stop this file
+# docker-compose down --to stop this file l
 # docker-compose logs -f  --to view logs
+
 
 
