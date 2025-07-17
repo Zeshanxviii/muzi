@@ -1,8 +1,8 @@
 import { prismaClient } from "@/app/lib/db";
+import { YT_REGEX } from "@/app/lib/reg";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-const YT_REGEX = /^(?:(?:https?:)?\/\/)?(?:www\.)?(?:m\.)?(?:youtu(?:be)?\.com\/(?:v\/|embed\/|watch(?:\/|\?v=))|youtu\.be\/)((?:\w|-){11})(?:\S+)?$/;
 
 const createStreamSchema = z.object({
     creatorId: z.string(),
@@ -67,15 +67,20 @@ export async function POST(req: NextRequest) {
                 extractedId,
                 title: title,
                 type: "Youtube",
-                smallImg:SmallImg,
-                bigImg:bigImg,
+                smallImg: SmallImg,
+                bigImg: bigImg,
             },
         });
 
         return NextResponse.json({
             message: "Added stream",
             id: stream.id,
-            title, // Return fetched title for client use
+            song: {
+                ...stream,
+                upvotes: 0,           // new stream has 0 upvotes
+                haveUpvoted: false    // user hasn't upvoted yet
+              }
+             // Return fetched title for client use
         });
     } catch (error) {
         console.error("Error in POST /stream:", error);
@@ -88,15 +93,41 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
     try {
-        const creatorId = req.nextUrl.searchParams.get("creator") || "";
+        const creatorId = req.nextUrl.searchParams.get("creatorId");
+
+        if(!creatorId){
+            return NextResponse.json({
+                message: "Error"
+            },{
+                status:403
+            })
+        }
 
         const streams = await prismaClient.stream.findMany({
             where: {
                 userId: creatorId,
             },
+            include: {
+                _count: {
+                    select: {
+                        upvotes: true
+                    }
+                },
+                upvotes: {
+                    where: {
+                        userId: creatorId
+                    }
+                }
+            }
         });
-
-        return NextResponse.json({ streams });
+    
+        return NextResponse.json({
+            streams: streams.map(({ _count, ...rest }) => ({
+                ...rest,
+                upvotes: _count.upvotes,
+                haveUpvoted: rest.upvotes?.length ? true :false
+            }))
+        });
     } catch (error) {
         console.error("Error in GET /stream:", error);
         return NextResponse.json(

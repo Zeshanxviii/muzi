@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
             email: session?.user?.email ?? ""
         }
     })
-    if (!user) {
+    if (!user?.id) {
         return NextResponse.json({
             message: "Unauthenticated"
         },
@@ -26,16 +26,19 @@ export async function POST(req: NextRequest) {
 
     try {
         const data = DownvoteSchema.parse(await req.json())
-        await prismaClient.upvote.create({
-            data: {
-                userId : user?.id,
-                streamId :data.streamId
+        await prismaClient.upvote.delete({
+            where: {
+                userId_streamId: {
+                    userId : user?.id,
+                    streamId :data.streamId
+            }
             }
         })
         return NextResponse.json({
             message:"Done!~"
         })
     } catch (e) {
+        console.log(e)
         return NextResponse.json({
             message: "Error while upvoting"
         },{
