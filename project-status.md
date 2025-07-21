@@ -1,0 +1,2 @@
+---need to put logic so that when a user upvoted icon it should be gone
+---need to look at in downvote endpoint 
