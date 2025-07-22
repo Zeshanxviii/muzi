@@ -33,7 +33,7 @@ export default function StreamView({
   creatorId,
   playVideo = false
 }: {
-  creatorId: String
+  creatorId: string
   playVideo: boolean
 }) {
   const [queue, setQueue] = useState<Song[]>([])
