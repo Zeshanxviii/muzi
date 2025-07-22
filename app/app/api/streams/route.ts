@@ -132,12 +132,12 @@ export async function GET(req: NextRequest) {
     
         return NextResponse.json({
             streams: streams.map(({ _count, ...rest }) => ({
-                ...rest,
-                upvotes: _count.upvotes,
-                haveUpvoted: rest.upvotes?.length ? true :false
+              ...rest,
+              upvotes: _count.upvotes,
+              haveUpvoted: rest.upvotes?.length ? true : false
             })),
             activeStream
-        });
+          });
     } catch (error) {
         console.error("Error in GET /stream:", error);
         return NextResponse.json(
