@@ -11,6 +11,7 @@ import LiteYouTubeEmbed from 'react-lite-youtube-embed';
 import { YT_REGEX } from "../lib/reg"
 import 'react-lite-youtube-embed/dist/LiteYouTubeEmbed.css';
 import { ToastContainer, toast } from 'react-toastify';
+import Image from "next/image"
 
 interface Song {
   id: string
@@ -29,11 +30,16 @@ interface Song {
 const REFRESH_INTERVAL = 10 * 1000;
 
 export default function StreamView({
-  creatorId
+  creatorId,
+  playVideo = false
 }: {
   creatorId: String
+  playVideo: boolean
 }) {
   const [queue, setQueue] = useState<Song[]>([])
+  const [newUrl, setNewUrl] = useState("")
+  const [currentlyPlaying, setCurrentlyPlaying] = useState<Song | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
   async function refreshstream() {
     try {
@@ -60,11 +66,6 @@ export default function StreamView({
       refreshstream();
     }, REFRESH_INTERVAL)
   }, [])
-
-  const [newUrl, setNewUrl] = useState("")
-  const [currentlyPlaying, setCurrentlyPlaying] = useState<Song | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-
   // Sort queue by votes (highest first)
   const sortedQueue = [...queue].sort((a, b) => b.upvotes - a.upvotes)
 
@@ -137,10 +138,27 @@ export default function StreamView({
     });
   };
 
-  const playNext = () => {
+  const playNext = async () => {
     const nextSong = sortedQueue.find((song) => song.id !== currentlyPlaying?.id)
     if (nextSong) {
       setCurrentlyPlaying(nextSong)
+    }
+    const url = "/api/streams/next";
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+      });
+      if (!response.ok) {
+        throw new Error(`Response status: ${response.status}`);
+      }
+
+      const json = await response.json();
+      setCurrentlyPlaying(json.stream);
+
+
+      console.log(json);
+    } catch (error) {
+      console.log("An unknown error occurred:", error);
     }
   }
 
@@ -159,9 +177,9 @@ export default function StreamView({
         // transition: Bounce,
 
       })
-    },(err)=>{
-      console.error('could not copy text',err)
-      toast.error('Failed to copy link Please try again.',{
+    }, (err) => {
+      console.error('could not copy text', err)
+      toast.error('Failed to copy link Please try again.', {
         position: "top-right",
         autoClose: 5000,
         hideProgressBar: false,
@@ -190,14 +208,14 @@ export default function StreamView({
                   <Play className="h-5 w-5 text-purple-400" />
                   Now Playing
                 </CardTitle>
-                <Button
+                {playVideo && <Button
                   onClick={playNext}
                   size="sm"
                   variant="outline"
                   className="border-gray-600 text-gray-300 hover:bg-gray-700 bg-transparent"
                 >
-                  Skip
-                </Button>
+                  Play Next
+                </Button>}
                 <Button
                   onClick={handleShare}
                   size="sm"
@@ -210,14 +228,25 @@ export default function StreamView({
             </CardHeader>
             <CardContent>
               {currentlyPlaying ? (
-                <div className="space-y-4">
-                  <div className="aspect-video bg-gray-900 rounded-lg overflow-hidden ">
-                    <LiteYouTubeEmbed id={currentlyPlaying.extractedId} title={currentlyPlaying.title} poster="maxresdefault" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-lg text-white">{currentlyPlaying.title}</h3>
-                    {/* <p className="text-gray-400 text-sm">Added by {currentlyPlaying.addedBy}</p> */}
-                  </div>
+                <div>
+                  {playVideo ?
+                    <div className="space-y-4">
+                      <div className="aspect-video bg-gray-900 rounded-lg overflow-hidden ">
+                        <LiteYouTubeEmbed id={currentlyPlaying.extractedId} title={currentlyPlaying.title} poster="maxresdefault" playlist={false} params="autoplay=1"/>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg text-white">{currentlyPlaying.title}</h3>
+                        {/* <p className="text-gray-400 text-sm">Added by {currentlyPlaying.addedBy}</p> */}
+                      </div>
+                    </div> :
+                    <div className="aspect-video bg-gray-900 rounded-lg flex items-center justify-center">
+                      <div className="text-center text-gray-500">
+                        <Music className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        <Image src={currentlyPlaying.bigImg} alt="song Image" />
+                      </div>
+                    </div>
+
+                  }
                 </div>
 
               ) : (
@@ -281,45 +310,56 @@ export default function StreamView({
             </CardHeader>
             <CardContent className="space-y-3">
               {sortedQueue.map((song, index) => (
-                <div key={song.id} className="space-y-3">
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-900/50 hover:bg-gray-900/80 transition-colors">
-                    <div className="flex flex-col items-center gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => vote(song.id, !!song.haveUpvoted)}
-                        className="h-6 w-6 p-0 text-green-400 hover:text-green-300 hover:bg-green-900/20"
-                      >
-                        {song.haveUpvoted === true ? <ThumbsDown className="h-3 w-3" /> : <ThumbsUp className="h-3 w-3" />}
-                      </Button>
-
-                      <span className="text-sm font-medium text-white min-w-[2ch] text-center">{song.upvotes}</span>
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs bg-purple-900/50 text-purple-300 px-2 py-1 rounded">#{index + 1}</span>
-                        {song.id === currentlyPlaying?.id && (
-                          <Badge className="bg-green-900/50 text-green-400 border-green-800 text-xs">Playing</Badge>
-                        )}
-                      </div>
-                      <h4 className="font-medium text-white text-sm truncate">{song.title}</h4>
-                      <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
-                        <span>by {song.userId}</span>
-                        {/* {song.duration && (
-                          <>
-                            <span>•</span>
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              <span>{song.duration}</span>
-                            </div>
-                          </>
-                        )} */}
-                      </div>
-                    </div>
-                  </div>
-                  {index < sortedQueue.length - 1 && <Separator className="bg-gray-700" />}
+              <div key={song.id} className="space-y-3">
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-900/50 hover:bg-gray-900/80 transition-colors">
+                
+                {/* Image section */}
+                <div className="flex-shrink-0">
+                  <img
+                    src={song.smallImg || "/placeholder.jpg"} // Replace with your image key in song object
+                    alt={song.title}
+                    className="w-28 h-22 rounded-md object-cover"
+                  />
                 </div>
+            
+                <div className="flex flex-col items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => vote(song.id, !!song.haveUpvoted)}
+                    className="h-6 w-6 p-0 text-green-400 hover:text-green-300 hover:bg-green-900/20"
+                  >
+                    {song.haveUpvoted === true ? <ThumbsDown className="h-3 w-3" /> : <ThumbsUp className="h-3 w-3" />}
+                  </Button>
+            
+                  <span className="text-sm font-medium text-white min-w-[2ch] text-center">{song.upvotes}</span>
+                </div>
+            
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs bg-purple-900/50 text-purple-300 px-2 py-1 rounded">#{index + 1}</span>
+                    {song.id === currentlyPlaying?.id && (
+                      <Badge className="bg-green-900/50 text-green-400 border-green-800 text-xs">Playing</Badge>
+                    )}
+                  </div>
+                  <h4 className="font-medium text-white text-sm truncate">{song.title}</h4>
+                  <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
+                    <span>by {song.userId}</span>
+                    {/* {song.duration && (
+                      <>
+                        <span>•</span>
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          <span>{song.duration}</span>
+                        </div>
+                      </>
+                    )} */}
+                  </div>
+                </div>
+              </div>
+              {index < sortedQueue.length - 1 && <Separator className="bg-gray-700" />}
+            </div>
+            
               ))}
 
               {queue.length === 0 && (

@@ -11,7 +11,7 @@ export default function Page({
 }){
     return(
         <>
-            <StreamView creatorId={creatorId}/>
+            <StreamView creatorId={creatorId} playVideo={false}/>
         </>
     )
 }
