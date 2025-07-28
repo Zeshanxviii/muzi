@@ -2,6 +2,7 @@ import { prismaClient } from "@/app/lib/db";
 import { YT_REGEX } from "@/app/lib/reg";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 
 
 const createStreamSchema = z.object({
@@ -91,58 +92,140 @@ export async function POST(req: NextRequest) {
     }
 }
 
-export async function GET(req: NextRequest) {
-    try {
-        const creatorId = req.nextUrl.searchParams.get("creatorId");
+// export async function GET(req: NextRequest) {
+//     try {
+//         const creatorId = req.nextUrl.searchParams.get("creatorId");
 
-        if(!creatorId){
-            return NextResponse.json({
-                message: "Error"
-            },{
-                status:403
-            })
-        }
+//         if(!creatorId){
+//             return NextResponse.json({
+//                 message: "Error"
+//             },{
+//                 status:403
+//             })
+//         }
 
-        const [streams,activeStream] = await Promise.all([prismaClient.stream.findMany({
-            where: {
-                userId: creatorId,
-                played: false
-            },
-            include: {
-                _count: {
-                    select: {
-                        upvotes: true
-                    }
-                },
-                upvotes: {
-                    where: {
-                        userId: creatorId
-                    }
-                }
-            }
-        }),prismaClient.currentStream.findFirst({
-            where: {
-                userId: creatorId
-            },
-            include: {
-                stream:true
-            }
-        })
-        ])
+//         const [streams,activeStream] = await Promise.all([prismaClient.stream.findMany({
+//             where: {
+//                 userId: creatorId,
+//                 played: false
+//             },
+//             include: {
+//                 _count: {
+//                     select: {
+//                         upvotes: true
+//                     }
+//                 },
+//                 upvotes: {
+//                     where: {
+//                         userId: creatorId
+//                     }
+//                 }
+//             }
+//         }),prismaClient.currentStream.findFirst({
+//             where: {
+//                 userId: creatorId
+//             },
+//             include: {
+//                 stream:true
+//             }
+//         })
+//         ])
     
-        return NextResponse.json({
-            streams: streams.map(({ _count, upvotes, ...rest }) => ({
-                ...rest,
-                upvotes: _count.upvotes,
-                haveUpvoted: upvotes.length ? true : false
-            })),
-            activeStream
-          });
-    } catch (error) {
-        console.error("Error in GET /stream:", error);
+//         return NextResponse.json({
+//             streams: streams.map(({ _count, upvotes, ...rest }) => ({
+//                 ...rest,
+//                 upvotes: _count.upvotes,
+//                 haveUpvoted: upvotes.length ? true : false
+//             })),
+//             activeStream
+//           });
+//     } catch (error) {
+//         console.error("Error in GET /stream:", error);
+//         return NextResponse.json(
+//             { message: "Failed to fetch streams" },
+//             { status: 500 }
+//         );
+//     }
+// }
+const streamWithCountAndUpvotes = Prisma.validator<Prisma.StreamDefaultArgs>()({
+    include: {
+      _count: {
+        select: { upvotes: true },
+      },
+      upvotes: true,
+    },
+  });
+  
+  type StreamWithExtras = Prisma.StreamGetPayload<typeof streamWithCountAndUpvotes>;
+  
+  // Define type for currentStream with stream included
+  const currentStreamWithStream = Prisma.validator<Prisma.CurrentStreamDefaultArgs>()({
+    include: {
+      stream: true,
+    },
+  });
+  
+  type CurrentStreamWithStream = Prisma.CurrentStreamGetPayload<typeof currentStreamWithStream>;
+  
+  export async function GET(req: NextRequest) {
+    try {
+      const creatorId = req.nextUrl.searchParams.get("creatorId");
+  
+      if (!creatorId) {
         return NextResponse.json(
-            { message: "Failed to fetch streams" },
-            { status: 500 }
+          {
+            message: "Error: Missing creatorId",
+          },
+          {
+            status: 403,
+          }
         );
+      }
+  
+      const [streams, activeStream]: [StreamWithExtras[], CurrentStreamWithStream | null] =
+        await Promise.all([
+          prismaClient.stream.findMany({
+            where: {
+              userId: creatorId,
+              played: false,
+            },
+            include: {
+              _count: {
+                select: {
+                  upvotes: true,
+                },
+              },
+              upvotes: {
+                where: {
+                  userId: creatorId,
+                },
+              },
+            },
+          }),
+          prismaClient.currentStream.findFirst({
+            where: {
+              userId: creatorId,
+            },
+            include: {
+              stream: true,
+            },
+          }),
+        ]);
+  
+      return NextResponse.json({
+        streams: streams.map(({ _count, upvotes, ...rest }) => ({
+          ...rest,
+          upvotes: _count.upvotes,
+          haveUpvoted: upvotes.length > 0,
+        })),
+        activeStream,
+      });
+    } catch (error) {
+      console.error("Error in GET /stream:", error);
+      return NextResponse.json(
+        { message: "Failed to fetch streams" },
+        { status: 500 }
+      );
     }
-}
+  }
+  
