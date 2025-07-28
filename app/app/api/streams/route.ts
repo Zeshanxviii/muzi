@@ -2,8 +2,6 @@ import { prismaClient } from "@/app/lib/db";
 import { YT_REGEX } from "@/app/lib/reg";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import type { Prisma } from "@prisma/client"; // ✅
-
 
 
 const createStreamSchema = z.object({
@@ -93,30 +91,6 @@ export async function POST(req: NextRequest) {
     }
 }
 
-
-
-// Define the type for stream with _count and upvotes included
-const streamWithExtras = {
-  include: {
-    _count: {
-      select: { upvotes: true },
-    },
-    upvotes: true,
-  },
-} satisfies Prisma.StreamDefaultArgs;
-
-type StreamWithExtras = Prisma.StreamGetPayload<typeof streamWithExtras>;
-
-// Define the type for currentStream with stream included
-const currentStreamWithStream = {
-  include: {
-    stream: true,
-  },
-} satisfies Prisma.CurrentStreamDefaultArgs;
-
-type CurrentStreamWithStream = Prisma.CurrentStreamGetPayload<typeof currentStreamWithStream>;
-
-
 export async function GET(req: NextRequest) {
     try {
         const creatorId = req.nextUrl.searchParams.get("creatorId");
@@ -157,17 +131,13 @@ export async function GET(req: NextRequest) {
         ])
     
         return NextResponse.json({
-            streams: streams.map((stream: StreamWithExtras) => {
-              const { _count, upvotes, ...rest } = stream;
-              return {
+            streams: streams.map(({ _count, upvotes, ...rest }:any) => ({
                 ...rest,
                 upvotes: _count.upvotes,
-                haveUpvoted: upvotes.length > 0,
-              };
-            }),
-            activeStream,
+                haveUpvoted: upvotes.length ? true : false
+            })),
+            activeStream
           });
-          
     } catch (error) {
         console.error("Error in GET /stream:", error);
         return NextResponse.json(
