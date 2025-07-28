@@ -2,7 +2,8 @@ import { prismaClient } from "@/app/lib/db";
 import { YT_REGEX } from "@/app/lib/reg";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client"; // ✅
+
 
 
 const createStreamSchema = z.object({
